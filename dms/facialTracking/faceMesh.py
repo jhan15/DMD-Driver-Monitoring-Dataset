@@ -154,8 +154,7 @@ def main():
             continue
 
         fm.process_frame(frame)
-        fm.draw_mesh_eyes()
-        fm.draw_mesh_lips()
+        fm.draw_mesh()
 
         ctime = time.time()
         fps = 1 / (ctime - ptime)
