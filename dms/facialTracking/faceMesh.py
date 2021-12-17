@@ -51,20 +51,17 @@ class FaceMesh:
         self.landmark_right_iris = np.unique(np.array(list(self.mp_face_mesh.FACEMESH_RIGHT_IRIS)))
         self.landmark_lips       = np.unique(np.array(list(self.mp_face_mesh.FACEMESH_LIPS)))
         
-    def process_frame(self, frame, draw=False):
+    def process_frame(self, frame):
         """The function to mesh the frame."""
         self.frame = frame
         self._face_mesh()
-        
-        if draw:
-            self._draw_mesh()
 
     def _face_mesh(self):
         """Call the mediapipe face_mesh processor."""
         frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
         self.mesh_result = self.face_mesh.process(frame)
     
-    def _draw_mesh(self):
+    def draw_mesh(self):
         """Draw the mesh result by mediapipe face_mesh processor."""
 
         # Possible self.mp_face_mesh.FACEMESH_<TYPES>:
@@ -110,6 +107,37 @@ class FaceMesh:
                     landmark_drawing_spec=None,
                     connection_drawing_spec=self.mp_drawing_styles
                     .get_default_face_mesh_iris_connections_style())
+    
+    def draw_mesh_eyes(self):
+        """Draw the mesh of eyes."""
+        if self.mesh_result.multi_face_landmarks:
+            for face_landmarks in self.mesh_result.multi_face_landmarks:
+                self.mp_drawing.draw_landmarks(
+                    image=self.frame,
+                    landmark_list=face_landmarks,
+                    connections=self.mp_face_mesh.FACEMESH_LEFT_EYE,
+                    landmark_drawing_spec=None,
+                    connection_drawing_spec=self.mp_drawing.DrawingSpec(
+                        color=conf.CT_COLOR, thickness=1, circle_radius=1))
+                self.mp_drawing.draw_landmarks(
+                    image=self.frame,
+                    landmark_list=face_landmarks,
+                    connections=self.mp_face_mesh.FACEMESH_RIGHT_EYE,
+                    landmark_drawing_spec=None,
+                    connection_drawing_spec=self.mp_drawing.DrawingSpec(
+                        color=conf.CT_COLOR, thickness=1, circle_radius=1))
+    
+    def draw_mesh_lips(self):
+        """Draw the mesh of lips."""
+        if self.mesh_result.multi_face_landmarks:
+            for face_landmarks in self.mesh_result.multi_face_landmarks:
+                self.mp_drawing.draw_landmarks(
+                    image=self.frame,
+                    landmark_list=face_landmarks,
+                    connections=self.mp_face_mesh.FACEMESH_LIPS,
+                    landmark_drawing_spec=None,
+                    connection_drawing_spec=self.mp_drawing.DrawingSpec(
+                        color=conf.CT_COLOR, thickness=1, circle_radius=1))
 
 def main():
     cap = cv2.VideoCapture(conf.CAM_ID)
@@ -125,7 +153,9 @@ def main():
             print("Ignoring empty camera frame.")
             continue
 
-        fm.process_frame(frame, draw=True)
+        fm.process_frame(frame)
+        fm.draw_mesh_eyes()
+        fm.draw_mesh_lips()
 
         ctime = time.time()
         fps = 1 / (ctime - ptime)
