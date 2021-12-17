@@ -101,12 +101,39 @@ class exportClass():
         """
         # config
         material = ["image"]
-        streams = ["body","face", "hands"] #must be "general" if not DMD dataset
-        channels = ["rgb", "ir"] #Include "depth" to export Depth information too. It must be only "rgb" if not DMD dataset
-        annotations = self.actionList
+        streams = ["face"] #must be "general" if not DMD dataset
+        channels = ["rgb"] #Include "depth" to export Depth information too. It must be only "rgb" if not DMD dataset
+        # annotations = self.actionList
+        annotations = [
+            # 'driver_actions/change_gear',
+            'driver_actions/drinking',
+            'driver_actions/hair_and_makeup',
+            'driver_actions/phonecall_left',
+            'driver_actions/phonecall_right',
+            # 'driver_actions/radio',
+            'driver_actions/reach_backseat',
+            'driver_actions/reach_side',
+            'driver_actions/safe_drive',
+            # 'driver_actions/standstill_or_waiting',
+            'driver_actions/talking_to_passenger',
+            'driver_actions/texting_left',
+            'driver_actions/texting_right',
+            # 'driver_actions/unclassified',
+            'gaze_on_road/looking_road',
+            # 'gaze_on_road/not_looking_road',
+            # 'hand_on_gear/hand_on_gear',
+            # 'hands_using_wheel/both',
+            # 'hands_using_wheel/none',
+            # 'hands_using_wheel/only_left',
+            # 'hands_using_wheel/only_right',
+            # 'objects_in_scene/bottle',
+            # 'objects_in_scene/cellphone',
+            # 'objects_in_scene/hair_comb',
+            # 'talking/talking'
+        ]
         write = True
         intervalChunk = 0
-        ignoreSmall = False
+        ignoreSmall = True
         asc = True
 
         #validations
@@ -325,10 +352,18 @@ class exportClass():
         capVideo.set(cv2.CAP_PROP_POS_FRAMES, frameStart)
         while success and capVideo.get(cv2.CAP_PROP_POS_FRAMES) <= frameEnd:
             success, image = capVideo.read()
+            image = self.resizeImage(image)
             if not success:
                 break
             cv2.imwrite(name+"_"+str(count)+".jpg", image)
             count += 1
+    
+    def resizeImage(self, image, scale=0.5):
+        width  = int(image.shape[1] * scale)
+        height = int(image.shape[0] * scale)
+        resized_image = cv2.resize(image, (width,height), interpolation=cv2.INTER_AREA)
+
+        return resized_image
 
     # Function to get images from @frameStart to @frameEnd of stream DEPTH info array @depthVideoArray
 
