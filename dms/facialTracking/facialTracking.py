@@ -12,34 +12,65 @@ class FacialTracker:
     def __init__(self):
 
         self.fm = FaceMesh()
+        self.left_eye  = None
+        self.right_eye = None
+        self.lips = None
+        self.left_eye_closed_frames  = 0
+        self.right_eye_closed_frames = 0
     
     def process_frame(self, frame):
-        self.gaze_status = None
-        self.yawn_status = None
-
+        """Process the frame to analyze facial status."""
+        self.detected = False
         self.fm.process_frame(frame)
         self.fm.draw_mesh_lips()
 
         if self.fm.mesh_result.multi_face_landmarks:
+            self.detected = True
             for face_landmarks in self.fm.mesh_result.multi_face_landmarks:
-                leftEye  = Eye(frame, face_landmarks, conf.LEFT_EYE)
-                rightEye = Eye(frame, face_landmarks, conf.RIGHT_EYE)
-                leftEye.iris.draw_iris(True)
-                rightEye.iris.draw_iris(True)
-                lips = Lips(frame, face_landmarks, conf.LIPS)
+                self.left_eye  = Eye(frame, face_landmarks, conf.LEFT_EYE)
+                self.right_eye = Eye(frame, face_landmarks, conf.RIGHT_EYE)
+                self.lips = Lips(frame, face_landmarks, conf.LIPS)
+                self._check_eyes_status()
+                self._check_yawn_status()
+    
+    def _check_eyes_status(self):
+        self.eyes_status = ''
+        
+        if self.left_eye.eye_closed():
+            self.left_eye_closed_frames += 1
+        else:
+            self.left_eye_closed_frames = 0
+            self.left_eye.iris.draw_iris(True)
 
-                if leftEye.eye_closed() or rightEye.eye_closed():
-                    self.gaze_status = 'Eye closed'
-                else:
-                    if   leftEye.gaze_right()  and rightEye.gaze_right():
-                        self.gaze_status = 'Gazing right'
-                    elif leftEye.gaze_left()   and rightEye.gaze_left():
-                        self.gaze_status = 'Gazing left'
-                    elif leftEye.gaze_center() and rightEye.gaze_center():
-                        self.gaze_status = 'Gazing center'
-                
-                if lips.mouth_open():
-                    self.yawn_status = 'Yawning'
+        if self.right_eye.eye_closed():
+            self.right_eye_closed_frames += 1
+        else:
+            self.right_eye_closed_frames = 0
+            self.right_eye.iris.draw_iris(True)
+        
+        if self._left_eye_closed() or self._right_eye_closed():
+            self.eyes_status = 'Eye closed'
+            return
+        
+        if not self.left_eye.eye_closed() and not self.right_eye.eye_closed():
+            if   self.left_eye.gaze_right()  and self.right_eye.gaze_right():
+                self.eyes_status = 'Gazing right'
+            elif self.left_eye.gaze_left()   and self.right_eye.gaze_left():
+                self.eyes_status = 'Gazing left'
+            elif self.left_eye.gaze_center() and self.right_eye.gaze_center():
+                self.eyes_status = 'Gazing center'
+
+    def _check_yawn_status(self):
+        self.yawn_status = ''
+        if self.lips.mouth_open():
+            self.yawn_status = 'Yawning'
+    
+    def _left_eye_closed(self, threshold=conf.FRAME_CLOSED):
+        return self.left_eye_closed_frames > threshold
+    
+    def _right_eye_closed(self, threshold=conf.FRAME_CLOSED):
+        return self.right_eye_closed_frames > threshold
+        
 
 def main():
     cap = cv2.VideoCapture(conf.CAM_ID)
@@ -65,10 +96,9 @@ def main():
         cv2.putText(frame, f'FPS: {int(fps)}', (30,30), 0, 0.6,
                     conf.TEXT_COLOR, 1, lineType=cv2.LINE_AA)
         
-        if facial_tracker.gaze_status:
-            cv2.putText(frame, f'{facial_tracker.gaze_status}', (30,70), 0, 0.8,
+        if facial_tracker.detected:
+            cv2.putText(frame, f'{facial_tracker.eyes_status}', (30,70), 0, 0.8,
                         conf.WARN_COLOR, 2, lineType=cv2.LINE_AA)
-        if facial_tracker.yawn_status:
             cv2.putText(frame, f'{facial_tracker.yawn_status}', (30,110), 0, 0.8,
                         conf.WARN_COLOR, 2, lineType=cv2.LINE_AA)
 
